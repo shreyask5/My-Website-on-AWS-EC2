@@ -27,4 +27,4 @@ I am hosting a website on AWS EC2. The setup includes:
 - **Next Steps**: Continue developing the website with iterative updates and enhancements. Further optimize Nginx settings for better performance and reliability.
 
 
-For detailed setup instructions and future updates, refer to the full documentation.
+For detailed setup instructions and future updates, refer to the full documentation
