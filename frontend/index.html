@@ -1,10 +1,141 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Simple HTTP Server</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Scoreboard</title>
+    <style>
+        @font-face {
+            font-family: Arcade;
+            src: url('./fonts/ARCADE_N.TTF');
+        }
+        body {
+            font-family: Arcade, sans-serif;
+            background: url('background.png') no-repeat center center fixed; /* Update with your image path */
+            background-size: cover;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: 100%;
+            margin: 0;
+        }
+
+        .container {
+            padding: 20px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #ff00ff;
+            font-size: 4em;
+            margin-top: -2%;
+            margin-bottom: 5%;
+        }
+        .scoreboard {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            font-size: 1.5em;
+        }
+        .column {
+            flex: 1 1 100%; /* Adjust this to make the columns wider */
+            max-width: 48%; /* Add a max-width to control the column size */
+            padding: 10px;
+            box-sizing: border-box; /* Ensure padding doesn't affect overall width */
+        }
+        .team {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+        .rank {
+            margin-right: 10px;
+        }
+        .retro-text {
+            color: #ff00ff;
+            text-shadow: 0px 0px 0 #00ff00, 
+                         0px 0px 0 #00ff00, 
+                         0px 0px 0 #00ff00, 
+                         2.5px 2.5px 0 #00ff00;
+        }
+        @media (max-width: 768px) {
+            .scoreboard {
+                flex-direction: column;
+                align-items: center;
+            }
+            .column {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
 </head>
 <body>
-    <h1>Hello, World!</h1>
-    <p>This is a simple HTTP server using http-server.</p>
+    <div class="container">
+        <h1 class="retro-text">SCOREBOARD</h1>
+        <div id="scoreboard" class="scoreboard">
+            <div id="left-column" class="column"></div>
+            <div id="right-column" class="column"></div>
+        </div>
+    </div>
+
+    <script>
+        // Function to fetch and display data
+        function fetchData() {
+            const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSJ9xq3HJMFX2p4hhBnuti5o3zXUHLbXISB101BILjbksy6l-6VmxfLV8y9j3FZV8nQh0hnnXpPyVjA/pub?output=csv'; // Replace with your published CSV URL
+
+            fetch(sheetUrl)
+                .then(response => response.text())
+                .then(csvText => {
+                    const rows = csvText.split('\n').slice(3, 31); // Slice to get rows 4 to 31
+                    let teams = [];
+                    rows.forEach(row => {
+                        const columns = row.split(',');
+                        if (columns.length >= 2 && columns[0].trim() !== '' && columns[1].trim() !== '') {
+                            teams.push({ name: columns[0].trim(), points: parseInt(columns[1].trim()) });
+                        }
+                    });
+
+                    // Sort teams by points in descending order
+                    teams.sort((a, b) => b.points - a.points);
+
+                    // Display top 16 teams
+                    let leftColumnHtml = '';
+                    let rightColumnHtml = '';
+                    for (let i = 0; i < Math.min(16, teams.length); i++) {
+                        const rank = i + 1;
+                        const rankSuffix = rank === 1 ? 'ST' : rank === 2 ? 'ND' : rank === 3 ? 'RD' : 'TH';
+                        const team = teams[i];
+                        const teamHtml = `
+                            <div class="team">
+                                <span class="rank retro-text">${rank}${rankSuffix}</span>
+                                <span>${team.name}</span>
+                                <span>${team.points}</span>
+                            </div>
+                        `;
+                        if (i < 8) {
+                            leftColumnHtml += teamHtml;
+                        } else {
+                            rightColumnHtml += teamHtml;
+                        }
+                    }
+                    document.getElementById('left-column').innerHTML = leftColumnHtml;
+                    document.getElementById('right-column').innerHTML = rightColumnHtml;
+                })
+                .catch(error => {
+                    console.error('Error fetching data: ', error);
+                    document.getElementById('left-column').innerHTML = 'Error fetching data.';
+                    document.getElementById('right-column').innerHTML = 'Error fetching data.';
+                });
+        }
+
+        // Call the fetchData function when the page loads
+        window.onload = fetchData;
+
+        // Refresh the data every 30 seconds
+        setInterval(fetchData, 15000);
+    </script>
 </body>
 </html>
