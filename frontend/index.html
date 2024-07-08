@@ -82,60 +82,92 @@
     </div>
 
     <script>
-        // Function to fetch and display data
+        const sheetId = "1kEfBragg_MnPtp4XnUjgXf8zCXRDnQaoQYpl6MWzXec";
+        const sheetName = encodeURIComponent("Sheet1");
+        const sheetURL = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${sheetName}`;
+
         function fetchData() {
-            const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSJ9xq3HJMFX2p4hhBnuti5o3zXUHLbXISB101BILjbksy6l-6VmxfLV8y9j3FZV8nQh0hnnXpPyVjA/pub?output=csv'; // Replace with your published CSV URL
-
-            fetch(sheetUrl)
-                .then(response => response.text())
-                .then(csvText => {
-                    const rows = csvText.split('\n').slice(3, 31); // Slice to get rows 4 to 31
-                    let teams = [];
-                    rows.forEach(row => {
-                        const columns = row.split(',');
-                        if (columns.length >= 2 && columns[0].trim() !== '' && columns[1].trim() !== '') {
-                            teams.push({ name: columns[0].trim(), points: parseInt(columns[1].trim()) });
-                        }
-                    });
-
-                    // Sort teams by points in descending order
-                    teams.sort((a, b) => b.points - a.points);
-
-                    // Display top 16 teams
-                    let leftColumnHtml = '';
-                    let rightColumnHtml = '';
-                    for (let i = 0; i < Math.min(16, teams.length); i++) {
-                        const rank = i + 1;
-                        const rankSuffix = rank === 1 ? 'ST' : rank === 2 ? 'ND' : rank === 3 ? 'RD' : 'TH';
-                        const team = teams[i];
-                        const teamHtml = `
-                            <div class="team">
-                                <span class="rank retro-text">${rank}${rankSuffix}</span>
-                                <span>${team.name}</span>
-                                <span>${team.points}</span>
-                            </div>
-                        `;
-                        if (i < 8) {
-                            leftColumnHtml += teamHtml;
-                        } else {
-                            rightColumnHtml += teamHtml;
-                        }
+            fetch(sheetURL)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    document.getElementById('left-column').innerHTML = leftColumnHtml;
-                    document.getElementById('right-column').innerHTML = rightColumnHtml;
+                    return response.text();
+                })
+                .then(csvText => {
+                    console.log('CSV Text:', csvText); // Debugging log
+                    handleResponse(csvText);
                 })
                 .catch(error => {
-                    console.error('Error fetching data: ', error);
+                    console.error('Error fetching data:', error);
                     document.getElementById('left-column').innerHTML = 'Error fetching data.';
                     document.getElementById('right-column').innerHTML = 'Error fetching data.';
                 });
         }
 
+        function handleResponse(csvText) {
+            let sheetObjects = csvToObjects(csvText);
+            console.log('Sheet Objects:', sheetObjects); // Debugging log
+            displayScores(sheetObjects);
+        }
+
+        function csvToObjects(csv) {
+            const csvRows = csv.split("\n");
+            const propertyNames = csvRows[0].split(",").map(val => val.trim().replace(/^"|"$/g, ''));
+            console.log('Property Names:', propertyNames); // Debugging log
+            let objects = [];
+            for (let i = 1; i < csvRows.length; i++) {
+                let thisObject = {};
+                let row = csvRows[i].split(",").map(val => val.trim().replace(/^"|"$/g, ''));
+                for (let j = 0; j < row.length; j++) {
+                    thisObject[propertyNames[j]] = row[j];
+                }
+                objects.push(thisObject);
+            }
+            return objects.filter(obj => Object.keys(obj).length > 1); // Filter out any empty rows
+        }
+
+        function displayScores(teams) {
+            // Filter and map the teams data
+            teams = teams.map(team => ({
+                name: team['Team Name '] ? team['Team Name '].trim() : '',
+                points: team['TOTAL POINTS '] ? parseInt(team['TOTAL POINTS '].trim()) : 0
+            })).filter(team => team.name && !isNaN(team.points));
+
+            console.log('Filtered Teams:', teams); // Debugging log
+
+            // Sort teams by points in descending order
+            teams.sort((a, b) => b.points - a.points);
+
+            // Display top 16 teams
+            let leftColumnHtml = '';
+            let rightColumnHtml = '';
+            for (let i = 0; i < Math.min(16, teams.length); i++) {
+                const rank = i + 1;
+                const rankSuffix = rank === 1 ? 'ST' : rank === 2 ? 'ND' : rank === 3 ? 'RD' : 'TH';
+                const team = teams[i];
+                const teamHtml = `
+                    <div class="team">
+                        <span class="rank retro-text">${rank}${rankSuffix}</span>
+                        <span>${team.name}</span>
+                        <span>${team.points}</span>
+                    </div>
+                `;
+                if (i < 8) {
+                    leftColumnHtml += teamHtml;
+                } else {
+                    rightColumnHtml += teamHtml;
+                }
+            }
+            document.getElementById('left-column').innerHTML = leftColumnHtml;
+            document.getElementById('right-column').innerHTML = rightColumnHtml;
+        }
+
         // Call the fetchData function when the page loads
         window.onload = fetchData;
 
-        // Refresh the data every 30 seconds
-        setInterval(fetchData, 15000);
+        // Refresh the data every 10 seconds
+        setInterval(fetchData, 10000);
     </script>
 </body>
 </html>
